@@ -2,20 +2,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import tensorflow.keras.backend as K
-from tensorflow.keras import Sequential, Model
-from tensorflow.keras.layers import Flatten, Dense,  Input, Conv2D, Activation, multiply
-from tensorflow.keras.layers import UpSampling2D, ZeroPadding2D, Dropout, Embedding
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Flatten, Dense,  Input
 from tensorflow.keras.layers import LeakyReLU, BatchNormalization, Reshape
-
-
-def wasserstein_loss(y_true, y_pred):
-    """
-    Custom loss function for W-GAN
-    Parameters:
-        y_true: type:np.array. Ground truth
-        y_pred: type:np.array. Predicted score
-    """
-    return K.mean(y_true * y_pred)
 
 
 def build_discriminator(input_shape=(28, 28,), verbose=True):
@@ -41,121 +30,6 @@ def build_discriminator(input_shape=(28, 28,), verbose=True):
     if verbose:
         model.summary()
 
-    return model
-
-
-def build_dc_discriminator(input_shape=(28, 28, 1), verbose=True):
-    """
-    Utility method to build a DCGAN discriminator
-    Parameters:
-        input_shape:    type:tuple. Shape of input image for classification.
-                        Default shape is (28,28,1)->MNIST
-        verbose:        type:boolean. Print model summary if set to true.
-                        Default is True
-    Returns:
-        tensorflow.keras.model object
-    """
-    model = Sequential()
-    model.add(Input(shape=input_shape))
-    model.add(Conv2D(32, kernel_size=3, strides=2,
-                     input_shape=input_shape,
-                     padding="same"))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Dropout(0.25))
-    model.add(Conv2D(64, kernel_size=3, strides=2, padding="same"))
-    model.add(ZeroPadding2D(padding=((0, 1), (0, 1))))
-    model.add(BatchNormalization(momentum=0.8))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Dropout(0.25))
-    model.add(Conv2D(128, kernel_size=3, strides=2, padding="same"))
-    model.add(BatchNormalization(momentum=0.8))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Dropout(0.25))
-    model.add(Conv2D(256, kernel_size=3, strides=1, padding="same"))
-    model.add(BatchNormalization(momentum=0.8))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Dropout(0.25))
-    model.add(Flatten())
-    model.add(Dense(1, activation='sigmoid'))
-
-    if verbose:
-        model.summary()
-    return model
-
-
-def build_conditional_discriminator(input_shape=(28, 28, 1),
-                                    num_classes=10, verbose=True):
-    """
-    Utility method to build a conditional MLP discriminator
-    Parameters:
-        input_shape:    type:tuple. Shape of input image for classification.
-                        Default shape is (28,28)->MNIST
-        num_classes:    type:int. Number of unique class labels.
-                        Default is 10->MNIST digits
-        verbose:        type:boolean. Print model summary if set to true.
-                        Default is True
-    Returns:
-        tensorflow.keras.model object
-    """
-
-    img = Input(shape=input_shape)
-    flat_img = Flatten()(img)
-
-    label = Input(shape=(1,), dtype='int32')
-    label_embedding = Flatten()(Embedding(num_classes,
-                                          np.prod(input_shape))(label))
-
-    model_input = multiply([flat_img, label_embedding])
-
-    mlp = Dense(512, input_dim=np.prod(input_shape))(model_input)
-    mlp = LeakyReLU(alpha=0.2)(mlp)
-    mlp = Dense(512)(mlp)
-    mlp = LeakyReLU(alpha=0.2)(mlp)
-    mlp = Dropout(0.4)(mlp)
-    mlp = Dense(512)(mlp)
-    mlp = LeakyReLU(alpha=0.2)(mlp)
-    mlp = Dropout(0.4)(mlp)
-    mlp = Dense(1, activation='sigmoid')(mlp)
-
-    model = Model([img, label], mlp)
-
-    if verbose:
-        model.summary()
-
-    return model
-
-
-def build_critic(input_shape=(28, 28, 1), verbose=True):
-    """
-    Utility method to build a MLP critic for W-GAN
-    Parameters:
-        input_shape:    type:tuple. Shape of input image for classification.
-                        Default shape is (28,28, 1)->MNIST
-        verbose:        type:boolean. Print model summary if set to true.
-                        Default is True
-    Returns:
-        tensorflow.keras.model object
-    """
-    model = Sequential()
-    model.add(Input(shape=input_shape))
-    model.add(Conv2D(16, kernel_size=3, strides=2, padding="same"))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Dropout(0.25))
-    model.add(Conv2D(32, kernel_size=3, strides=2, padding="same"))
-    model.add(ZeroPadding2D(padding=((0, 1), (0, 1))))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Dropout(0.25))
-    model.add(Conv2D(64, kernel_size=3, strides=2, padding="same"))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Dropout(0.25))
-    model.add(Conv2D(128, kernel_size=3, strides=1, padding="same"))
-    model.add(LeakyReLU(alpha=0.2))
-    model.add(Dropout(0.25))
-    model.add(Flatten())
-    model.add(Dense(1))
-
-    if verbose:
-        model.summary()
     return model
 
 
@@ -186,79 +60,6 @@ def build_generator(z_dim=100, output_shape=(28, 28), verbose=True):
     model.add(BatchNormalization(momentum=0.8))
     model.add(Dense(np.prod(output_shape), activation='tanh'))
     model.add(Reshape(output_shape))
-
-    if verbose:
-        model.summary()
-    return model
-
-
-def build_dc_generator(z_dim=100, verbose=True):
-    """
-    Utility method to build a DCGAN generator
-    Parameters:
-        z_dim:          type:int(positive). Size of input noise vector to be
-                        used as model input.
-                        Default value is 100
-        verbose:        type:boolean. Print model summary if set to true.
-                        Default is True
-    Returns:
-        tensorflow.keras.model object
-    """
-    model = Sequential()
-    model.add(Input(shape=(z_dim,)))
-    model.add(Dense(128 * 7 * 7, activation="relu", input_dim=z_dim))
-    model.add(Reshape((7, 7, 128)))
-    model.add(UpSampling2D())
-    model.add(Conv2D(128, kernel_size=3, padding="same"))
-    model.add(BatchNormalization(momentum=0.8))
-    model.add(Activation("relu"))
-    model.add(UpSampling2D())
-    model.add(Conv2D(64, kernel_size=3, padding="same"))
-    model.add(BatchNormalization(momentum=0.8))
-    model.add(Activation("relu"))
-    model.add(Conv2D(1, kernel_size=3, padding="same"))
-    model.add(Activation("tanh"))
-
-    if verbose:
-        model.summary()
-
-    return model
-
-
-def build_conditional_generator(z_dim=100, output_shape=(28, 28, 1),
-                                num_classes=10, verbose=True):
-    """
-    Utility method to build a MLP generator
-    Parameters:
-        z_dim:          type:int(positive). Size of input noise vector to be
-                        used as model input.
-                        Default value is 100
-        output_shape:   type:tuple. Shape of output image .
-                        Default shape is (28,28)->MNIST
-        num_classes:    type:int. Number of unique class labels.
-                        Default is 10->MNIST digits
-        verbose:        type:boolean. Print model summary if set to true.
-                        Default is True
-    Returns:
-        tensorflow.keras.model object
-    """
-    noise = Input(shape=(z_dim,))
-    label = Input(shape=(1,), dtype='int32')
-    label_embedding = Flatten()(Embedding(num_classes, z_dim)(label))
-    model_input = multiply([noise, label_embedding])
-
-    mlp = Dense(256, input_dim=z_dim)(model_input)
-    mlp = LeakyReLU(alpha=0.2)(mlp)
-    mlp = BatchNormalization(momentum=0.8)(mlp)
-    mlp = Dense(512)(mlp)
-    mlp = LeakyReLU(alpha=0.2)(mlp)
-    mlp = Dense(1024)(mlp)
-    mlp = LeakyReLU(alpha=0.2)(mlp)
-    mlp = BatchNormalization(momentum=0.8)(mlp)
-    mlp = Dense(np.prod(output_shape), activation='tanh')(mlp)
-    mlp = Reshape(output_shape)(mlp)
-
-    model = Model([noise, label], mlp)
 
     if verbose:
         model.summary()
