@@ -7,6 +7,7 @@
 + [Registration Link](https://www.eventbrite.com/e/data-ketchup-13-tickets-167996258331)
 + :alarm_clock: 7pm IST
 + :date: August 28th, 2021
++ :tv: [YouTube](https://youtu.be/J_33jSkFQis)
 
 ## Agenda
 - Machine Learning Landscape
